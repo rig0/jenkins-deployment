@@ -508,7 +508,8 @@ if [ ! -f "${SCRIPT_PATH}" ]; then
 fi
 
 # Make script executable (if not already)
-if [ ! -x "${SCRIPT_PATH}" ] && [ ! "${SCRIPT_PATH}" = *.py ]; then
+# Skip for Python files since they're executed via python3
+if [[ ! -x "${SCRIPT_PATH}" && ! "${SCRIPT_PATH}" == *.py ]]; then
   chmod +x "${SCRIPT_PATH}"
 fi
 
@@ -518,16 +519,20 @@ ${ENV_EXPORTS}
 
 # Kill any existing instance of the application
 echo "🔍 Checking for existing application processes..."
-EXISTING_PID=$(pgrep -f "${SCRIPT_PATH}" || true)
-if [ -n "$EXISTING_PID" ]; then
-  echo "⚠️  Found existing process (PID: $EXISTING_PID), terminating..."
-  kill $EXISTING_PID 2>/dev/null || true
+EXISTING_PIDS=$(pgrep -f "${SCRIPT_PATH}" || true)
+if [[ -n "${EXISTING_PIDS}" ]]; then
+  echo "⚠️  Found existing process(es) (PID: ${EXISTING_PIDS}), terminating..."
+  for pid in ${EXISTING_PIDS}; do
+    kill "${pid}" 2>/dev/null || true
+  done
   sleep 2
   # Force kill if still running
-  if ps -p $EXISTING_PID > /dev/null 2>&1; then
-    kill -9 $EXISTING_PID 2>/dev/null || true
-  fi
-  echo "✅ Existing process terminated"
+  for pid in ${EXISTING_PIDS}; do
+    if ps -p "${pid}" > /dev/null 2>&1; then
+      kill -9 "${pid}" 2>/dev/null || true
+    fi
+  done
+  echo "✅ Existing process(es) terminated"
 fi
 
 echo "🚀 Launching application in background..."
@@ -546,7 +551,7 @@ echo "✅ Application launched with PID: ${APP_PID}"
 sleep 3
 
 # HEALTH CHECK: Verify process is still running
-if ps -p ${APP_PID} > /dev/null 2>&1; then
+if ps -p "${APP_PID}" > /dev/null 2>&1; then
   echo "✅ Application process confirmed running (PID: ${APP_PID})"
   echo "📋 Log file: ${LOG_PATH}"
   echo "🔍 Initial log output:"
