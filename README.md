@@ -429,7 +429,7 @@ Credentials never appear in:
 
 **Cause:** Package names contain invalid characters.
 
-**Solution:** Ensure package names only contain `[a-zA-Z0-9._-]`:
+**Solution:** Ensure package names only contain `[a-zA-Z0-9._+-]`:
 
 ```groovy
 // ✅ Correct

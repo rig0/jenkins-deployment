@@ -66,10 +66,10 @@ def installSystemDependencies(String remoteHost, String sshCredentialsId, List<S
   echo "Packages: ${packages.size()} packages"
 
   // SECURITY: Validate package names to prevent command injection
-  // Only allow alphanumeric, hyphens, underscores, and dots
-  def invalidPackages = packages.findAll { !it.matches(/^[a-zA-Z0-9._-]+$/) }
+  // Only allow alphanumeric, hyphens, underscores, dots, and plus signs
+  def invalidPackages = packages.findAll { !it.matches(/^[a-zA-Z0-9._+-]+$/) }
   if (invalidPackages) {
-    error "❌ Invalid package names detected: ${invalidPackages}. Only alphanumeric, hyphens, underscores, and dots are allowed."
+    error "❌ Invalid package names detected: ${invalidPackages}. Only alphanumeric, hyphens, underscores, dots, and plus signs are allowed."
   }
 
   withCredentials([
