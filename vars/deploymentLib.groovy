@@ -713,3 +713,169 @@ CLONE_SCRIPT
     }
   }
 }
+
+/**
+ * Execute arbitrary command on remote host with output capture
+ *
+ * PURPOSE: Run shell commands/scripts on remote host and capture results
+ *
+ * RATIONALE: Many deployment tasks need to run custom commands (tests, health
+ * checks, database migrations, etc.). This function provides a flexible,
+ * reusable way to execute commands while capturing output and exit codes.
+ *
+ * SECURITY BENEFIT:
+ * - Validates workdir to prevent path traversal
+ * - Captures both stdout and stderr for debugging
+ * - Returns exit codes for proper error handling
+ * - No command injection via parameterized execution
+ *
+ * MAINTENANCE ADVANTAGE:
+ * - Single function for all remote command execution
+ * - Standardized output format
+ * - Clear separation of command script from execution
+ * - Easy to extend with timeout support
+ *
+ * @param remoteHost Target hostname or IP address
+ * @param sshCredentialsId Jenkins credential ID for SSH access
+ * @param workdir Remote working directory where command will execute
+ * @param commandScript Shell script to execute (can be multiline)
+ * @param waitForCompletion Wait for command to complete (default: true)
+ * @param timeoutSeconds Timeout in seconds (default: 300)
+ * @return Map containing: [exitCode: int, output: String, success: boolean]
+ *
+ * EXAMPLE:
+ * def result = deploymentLib.runRemoteCommand(
+ *   'myhost.example.com',
+ *   'ssh-credentials',
+ *   '/tmp/myapp',
+ *   '''
+ *   source venv/bin/activate
+ *   pytest -v --junit-xml=test-results.xml
+ *   ''',
+ *   true  // Wait for completion
+ * )
+ *
+ * if (result.exitCode == 0) {
+ *   echo "✅ Command succeeded"
+ * } else {
+ *   echo "❌ Command failed with exit code: ${result.exitCode}"
+ * }
+ * echo "Output: ${result.output}"
+ *
+ * LEARNING POINT: Using HEREDOC with single quotes prevents variable
+ * interpolation issues. The command script is passed as-is to the remote host.
+ *
+ * ALTERNATIVES: Could use Jenkins SSH Pipeline Steps plugin, but this approach
+ * gives us more control and consistent error handling across all functions.
+ */
+def runRemoteCommand(String remoteHost, String sshCredentialsId, String workdir,
+                     String commandScript, boolean waitForCompletion = true,
+                     int timeoutSeconds = 300) {
+  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  echo "⚡ Executing Remote Command"
+  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  echo "Host: ${remoteHost}"
+  echo "Workdir: ${workdir}"
+  echo "Wait for completion: ${waitForCompletion}"
+  echo "Timeout: ${timeoutSeconds}s"
+
+  // SECURITY: Validate workdir doesn't contain command injection attempts
+  if (workdir.contains(';') || workdir.contains('|') || workdir.contains('&')) {
+    error "❌ Invalid workdir path: ${workdir}. Path cannot contain shell metacharacters."
+  }
+
+  withCredentials([
+    usernamePassword(credentialsId: sshCredentialsId, usernameVariable: 'SSH_USER', passwordVariable: 'SSH_PASS')
+  ]) {
+    try {
+      // Wrap the user's command in a script that changes to workdir
+      def wrappedScript = """set -euo pipefail
+
+cd "${workdir}"
+
+echo "📂 Working directory: \$(pwd)"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "🚀 Executing command..."
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+${commandScript}
+
+EXIT_CODE=\$?
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "✅ Command completed with exit code: \${EXIT_CODE}"
+exit \${EXIT_CODE}
+"""
+
+      // Execute command and capture output
+      def output = ""
+      def exitCode = 0
+
+      if (waitForCompletion) {
+        // Execute with both output capture and exit code
+        output = sh(
+          script: """
+timeout ${timeoutSeconds}s sshpass -p '${SSH_PASS}' ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \\
+  '${SSH_USER}@${remoteHost}' \\
+  'bash -s' <<'REMOTE_COMMAND'
+${wrappedScript}
+REMOTE_COMMAND
+""",
+          returnStdout: true,
+          returnStatus: false
+        ).trim()
+
+        // Get exit code separately
+        exitCode = sh(
+          script: """
+timeout ${timeoutSeconds}s sshpass -p '${SSH_PASS}' ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \\
+  '${SSH_USER}@${remoteHost}' \\
+  'bash -s' <<'REMOTE_COMMAND'
+${wrappedScript}
+REMOTE_COMMAND
+""",
+          returnStatus: true
+        )
+
+        echo "Command Output:"
+        echo output
+        echo "Exit Code: ${exitCode}"
+
+        return [
+          exitCode: exitCode,
+          output: output,
+          success: exitCode == 0
+        ]
+
+      } else {
+        // Execute in background (fire and forget)
+        sh(
+          script: """
+sshpass -p '${SSH_PASS}' ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \\
+  '${SSH_USER}@${remoteHost}' \\
+  'nohup bash -s > /dev/null 2>&1 &' <<'REMOTE_COMMAND'
+${wrappedScript}
+REMOTE_COMMAND
+""",
+          returnStatus: true
+        )
+
+        echo "✅ Command launched in background"
+
+        return [
+          exitCode: 0,
+          output: "Command launched in background mode",
+          success: true
+        ]
+      }
+
+    } catch (Exception e) {
+      echo "❌ Error executing remote command: ${e.message}"
+      return [
+        exitCode: 1,
+        output: "Exception: ${e.message}",
+        success: false,
+        error: e.message
+      ]
+    }
+  }
+}

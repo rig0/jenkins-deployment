@@ -337,6 +337,55 @@ if (result.success) {
 }
 ```
 
+---
+
+### `runRemoteCommand()`
+
+Execute arbitrary commands on a remote host with output capture and exit code handling.
+
+**Parameters:**
+- `remoteHost` (String): Target hostname or IP address
+- `sshCredentialsId` (String): Jenkins SSH credentials ID
+- `workdir` (String): Remote working directory where command executes
+- `commandScript` (String): Shell script to execute (can be multiline)
+- `waitForCompletion` (Boolean, optional): Wait for completion (default: true)
+- `timeoutSeconds` (Integer, optional): Command timeout in seconds (default: 300)
+
+**Returns:** Map with keys:
+- `exitCode` (Integer): Command exit code
+- `output` (String): Command stdout/stderr output
+- `success` (Boolean): True if exitCode == 0
+- `error` (String, optional): Error message if failed
+
+**Use Cases:**
+- Running unit tests
+- Database migrations
+- Health checks
+- Custom deployment tasks
+
+**Example:**
+```groovy
+def result = deploymentLib.runRemoteCommand(
+  'app.example.com',
+  'ssh-creds',
+  '/opt/myapp',
+  '''
+  source venv/bin/activate
+  pytest -v --junit-xml=test-results.xml
+  ''',
+  true  // Wait for completion
+)
+
+if (result.exitCode == 0) {
+  echo "✅ Tests passed"
+  currentBuild.result = 'SUCCESS'
+} else {
+  echo "❌ Tests failed with exit code: ${result.exitCode}"
+  echo "Output: ${result.output}"
+  currentBuild.result = 'UNSTABLE'
+}
+```
+
 ## Configuration Template Best Practices
 
 ### Use Placeholder Syntax
