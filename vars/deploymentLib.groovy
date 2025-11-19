@@ -789,7 +789,8 @@ def runRemoteCommand(String remoteHost, String sshCredentialsId, String workdir,
   ]) {
     try {
       // Wrap the user's command in a script that changes to workdir
-      def wrappedScript = """set -euo pipefail
+      // Note: Using 'set -uo pipefail' but NOT 'set -e' so we can capture exit codes
+      def wrappedScript = """set -uo pipefail
 
 cd "${workdir}"
 
@@ -798,33 +799,24 @@ echo "━━━━━━━━━━━━━━━━━━━━━━━━�
 echo "🚀 Executing command..."
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
+# Allow command to fail so we can capture exit code
+set +e
 ${commandScript}
-
 EXIT_CODE=\$?
+set -e
+
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo "✅ Command completed with exit code: \${EXIT_CODE}"
 exit \${EXIT_CODE}
 """
 
-      // Execute command and capture output
-      def output = ""
+      // Execute command and capture exit code
+      // Note: Output is displayed in Jenkins console, not captured in variable
       def exitCode = 0
 
       if (waitForCompletion) {
-        // Execute with both output capture and exit code
-        output = sh(
-          script: """
-timeout ${timeoutSeconds}s sshpass -p '${SSH_PASS}' ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \\
-  '${SSH_USER}@${remoteHost}' \\
-  'bash -s' <<'REMOTE_COMMAND'
-${wrappedScript}
-REMOTE_COMMAND
-""",
-          returnStdout: true,
-          returnStatus: false
-        ).trim()
-
-        // Get exit code separately
+        // Execute command and get exit code
+        // Output goes to Jenkins console automatically
         exitCode = sh(
           script: """
 timeout ${timeoutSeconds}s sshpass -p '${SSH_PASS}' ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \\
@@ -836,13 +828,12 @@ REMOTE_COMMAND
           returnStatus: true
         )
 
-        echo "Command Output:"
-        echo output
-        echo "Exit Code: ${exitCode}"
+        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+        echo "Command Exit Code: ${exitCode}"
 
         return [
           exitCode: exitCode,
-          output: output,
+          output: "Output displayed in console above",
           success: exitCode == 0
         ]
 
