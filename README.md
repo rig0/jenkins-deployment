@@ -17,7 +17,7 @@ A reusable Jenkins shared library for deploying Python-based applications follow
    - Name: `jenkins-deployment`
    - Default version: `main`
    - Retrieval method: Modern SCM → Git
-   - Project Repository: (path to this repository)
+   - Project Repository: https://github.com/rig0/jenkins-deployment
 
 ## Usage
 
