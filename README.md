@@ -1,6 +1,20 @@
+<div align="center">
+
 # Jenkins Deployment Library
 
-A reusable Jenkins shared library for deploying Python-based applications following the **System Dependencies → Python Install → Config → Run** pattern.
+![CI/CD](https://img.shields.io/badge/CI%2FCD-239120?logo=gitlab&logoColor=white)
+![Jenkins](https://img.shields.io/badge/Jenkins-D24939?logo=jenkins&logoColor=white)
+![Groovy](https://img.shields.io/badge/Groovy-5a92a7?logo=apachegroovy&logoColor=white)
+
+![Release](https://img.shields.io/github/v/release/rig0/jenkins-deployment?labelColor=222&color=80ff63)
+![Stability](https://img.shields.io/badge/stability-stable-80ff63?labelColor=222)
+![Maintained](https://img.shields.io/badge/maintained-yes-80ff63?labelColor=222)
+![GitHub last commit](https://img.shields.io/github/last-commit/rig0/jenkins-deployment?labelColor=222&color=80ff63)
+
+
+**A Jenkins shared library for deploying Python-based applications following the **System Dependencies → Python Install → Config → Run** pattern.**
+
+</div>
 
 ## Features
 
@@ -17,7 +31,7 @@ A reusable Jenkins shared library for deploying Python-based applications follow
    - Name: `jenkins-deployment`
    - Default version: `main`
    - Retrieval method: Modern SCM → Git
-   - Project Repository: https://github.com/rig0/jenkins-deployment
+   - Project Repository: `https://github.com/rig0/jenkins-deployment`
 
 ## Usage
 
