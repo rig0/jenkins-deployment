@@ -7,6 +7,7 @@
 ![Groovy](https://img.shields.io/badge/Groovy-5a92a7?logo=apachegroovy&logoColor=white)
 
 ![Latest Tag](https://img.shields.io/github/v/tag/rig0/jenkins-deployment?labelColor=222&color=80ff63&label=latest)
+[![Code Factor](https://img.shields.io/codefactor/grade/github/rig0/jenkins-deployment?color=80ff63&labelColor=222)](https://www.codefactor.io/repository/github/rig0/jenkins-deployment/overview/main)
 ![Maintained](https://img.shields.io/badge/maintained-yes-80ff63?labelColor=222)
 ![GitHub last commit](https://img.shields.io/github/last-commit/rig0/jenkins-version?labelColor=222&color=80ff63)
 
